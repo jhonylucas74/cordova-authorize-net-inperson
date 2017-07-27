@@ -1,9 +1,9 @@
 
 var exec = require('cordova/exec');
 
-var PLUGIN_NAME = 'MyCordovaPlugin';
+var PLUGIN_NAME = 'AuthozizeNetPlugin';
 
-var MyCordovaPlugin = {
+var AuthozizeNetPlugin = {
   echo: function(phrase, cb) {
     exec(cb, null, PLUGIN_NAME, 'echo', [phrase]);
   },

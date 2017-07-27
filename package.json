@@ -1,12 +1,11 @@
 {
-  "name": "cordova-plugin-template",
+  "name": "cordova-authorize-net-inperson",
   "version": "1.0.0",
   "cordova": {
-    "id": "cordova-plugin-template",
+    "id": "cordova-authorize-net-inperson",
     "platforms": [
-      "android",
-      "ios",
+      "android"
     ]
   },
-  "description": "A starting point for a Cordova Plugin"
+  "description": "The Cordova Authorize.Net In-Person provides a Semi-Integrated Solution for EMV payment processing."
 }
