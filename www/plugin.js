@@ -4,12 +4,12 @@ var exec = require('cordova/exec');
 var PLUGIN_NAME = 'AuthozizeNetPlugin';
 
 var AuthozizeNetPlugin = {
-  echo: function(phrase, cb) {
-    exec(cb, null, PLUGIN_NAME, 'echo', [phrase]);
+  createEMVTransaction: function(options, done, error) {
+    exec(done, error, PLUGIN_NAME, 'createEMVTransaction', options);
   },
-  getDate: function(cb) {
-    exec(cb, null, PLUGIN_NAME, 'getDate', []);
+  createNonEMVTransaction: function(options, done, error) {
+    exec(done, error, PLUGIN_NAME, 'createNonEMVTransaction', options);
   }
 };
 
-module.exports = MyCordovaPlugin;
+module.exports = AuthozizeNetPlugin;
