@@ -33,6 +33,7 @@ import java.math.BigDecimal;
 
 public class AuthozizeNetPlugin extends CordovaPlugin {
   private static final String TAG = "AuthozizeNetPlugin";
+  private static Merchant merchant;
 
   public void initialize(CordovaInterface cordova, CordovaWebView webView) {
     super.initialize(cordova, webView);
@@ -41,24 +42,42 @@ public class AuthozizeNetPlugin extends CordovaPlugin {
 
   public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
     switch(action){
+      case "initMerchant":
+        initMerchant(args, callbackContext);
+        break;
       case "createEMVTransaction":
-        createEMVTransaction(args);
+        createEMVTransaction(args, callbackContext);
         break;
       case "createNonEMVTransaction":
-        createNonEMVTransaction(args);
+        createNonEMVTransaction(args, callbackContext);
         break;
     }
 
     return true;
   }
 
-  /* Create and Submit an EMV Transaction */
-  public void createEMVTransaction(JSONArray args, CallbackContext callbackContext) {
+
+  private Transaction createLoginTransaction(){
+    return this.merchant.createMobileTransaction(TransactionType.MOBILE_DEVICE_LOGIN);
+  }
+
+  private void setEnvironment(String environment, PasswordAuthentication passAuth){
+    switch(environment) {
+      case "sandbox":
+        this.merchant = Merchant.createMerchant(Environment.SANDBOX, passAuth);
+        break;
+      case "production":
+        this.merchant = Merchant.createMerchant(Environment.PRODUCTION, passAuth);
+        break;
+    }
+  }
+
+ 
+  public void initMerchant(JSONArray args, CallbackContext callbackContext) {
     net.authorize.mobile.Result result;
     String deviceID = args.getString("device_id");
     String deviceDescription = args.getString("device_description");
     String deviceNumber = args.getString("device_number");
-
     String username = args.getString("username");
     String password = args.getString("password");
     String environment = args.getString("environment");
@@ -66,48 +85,78 @@ public class AuthozizeNetPlugin extends CordovaPlugin {
 
     PasswordAuthentication passAuth = PasswordAuthentication
       .createMerchantAuthentication(username, password, deviceID);
-    
-    switch(environment){
-      case "sandbox":
-        AppManager.merchant = Merchant.createMerchant(Environment.SANDBOX, passAuth);
-        break;
-      case "production":
-        AppManager.merchant = Merchant.createMerchant(Environment.PRODUCTION, passAuth);
-        break;
-    }
 
-    net.authorize.mobile.Transaction transaction = AppManager.merchant
-            .createMobileTransaction(net.authorize.mobile.TransactionType.MOBILE_DEVICE_LOGIN);
+    setEnvironment(environment, passAuth);
+
+    Transaction transaction = createLoginTransaction();
+
     MobileDevice mobileDevice = MobileDevice
             .createMobileDevice(deviceID, deviceDescription, deviceNumber, "Android");
     transaction.setMobileDevice(mobileDevice);
     
-    result = (net.authorize.mobile.Result) AppManager.merchant.postTransaction(transaction);
+    result = (net.authorize.mobile.Result) this.merchant.postTransaction(transaction);
 
     if(result.isOk()){
       try {
           SessionTokenAuthentication sessionTokenAuthentication = SessionTokenAuthentication
-                  .createMerchantAuthentication(AppManager.merchant
+                  .createMerchantAuthentication(this.merchant
                           .getMerchantAuthentication().getName(), result
                           .getSessionToken(), deviceID);
-          if ((result.getSessionToken() != null) && (sessionTokenAuthentication != null)) {
-              AppManager.merchant.setMerchantAuthentication(sessionTokenAuthentication);
 
+          if ((result.getSessionToken() != null) && (sessionTokenAuthentication != null)) {
+              this.merchant.setMerchantAuthentication(sessionTokenAuthentication);
               callbackContext.success("sucesso");
           }
       } catch (Exception ex) {
-         callbackContext.error("erro");
+         callbackContext.error(ex.toString());
       }
     } else {
-         callbackContext.error("erro");
-        // Log.e("EMVResponse",result.getXmlResponse());
+      callbackContext.error(result.getXmlResponse().toString());
     }
-
-    
   }
 
-  /* Create Non-EMV transaction Using Encrypted Swiper Data */
-  public void createNonEMVTransaction(){
+  /* Create and Submit an EMV Transaction */
+  public void createEMVTransaction(JSONArray args, CallbackContext callbackContext){
 
+  }
+  /* Create Non-EMV transaction Using Encrypted Swiper Data */
+  public void createNonEMVTransaction(JSONArray args, CallbackContext callbackContext){
+    EMVTransactionManager.EMVTransactionListener iemvTransaction = 
+      new EMVTransactionManager.EMVTransactionListener() {
+          @Override
+          public void onEMVTransactionSuccessful(net.authorize.aim.emv.Result result) {
+            callbackContext.success(result.getEmvTlvMap().toString());
+          }
+
+          @Override
+          public void onEMVReadError(EMVErrorCode emvError) {
+             callbackContext.error(emvError.getErrorString());
+          }
+
+          @Override
+          public void onEMVTransactionError(net.authorize.aim.emv.Result result, EMVErrorCode emvError) {
+            callbackContext.error(emvError.getErrorString());
+          }
+      };
+
+    Order order = Order.createOrder();
+    OrderItem oi = OrderItem.createOrderItem();
+    oi.setItemId("1");
+    oi.setItemName("name");
+
+    oi.setItemQuantity("1");
+    oi.setItemTaxable(false);
+    oi.setItemDescription("desc");
+    oi.setItemDescription("Goods");
+
+    order.addOrderItem(oi);
+    BigDecimal transAmount = new BigDecimal("1.20");
+    oi.setItemPrice(transAmount);
+    order.setTotalAmount(transAmount);
+    EMVTransaction emvTransaction = EMVTransactionManager.createEMVTransaction(AppManager.merchant, transAmount);
+    emvTransaction.setEmvTransactionType(EMVTransactionType.GOODS);
+    emvTransaction.setOrder(order);
+    emvTransaction.setSolutionID("SOLUTION ID");
+    EMVTransactionManager.startEMVTransaction(emvTransaction, iemvTransaction, context);
   }
 }
