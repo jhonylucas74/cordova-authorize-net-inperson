@@ -28,11 +28,12 @@ import net.authorize.data.OrderItem;
 import net.authorize.data.creditcard.CreditCard;
 import net.authorize.data.creditcard.CreditCardPresenceType;
 import net.authorize.data.mobile.MobileDevice;
+import net.authorize.mobile.Transaction;
 
 import java.math.BigDecimal;
 
-public class AuthozizeNetPlugin extends CordovaPlugin {
-  private static final String TAG = "AuthozizeNetPlugin";
+public class AuthorizeNetPlugin extends CordovaPlugin {
+  private static final String TAG = "AuthorizeNetPlugin";
   private static Merchant merchant;
 
   public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -41,46 +42,42 @@ public class AuthozizeNetPlugin extends CordovaPlugin {
   }
 
   public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
-    switch(action){
-      case "initMerchant":
-        initMerchant(args, callbackContext);
-        break;
-      case "createEMVTransaction":
-        createEMVTransaction(args, callbackContext);
-        break;
-      case "createNonEMVTransaction":
-        createNonEMVTransaction(args, callbackContext);
-        break;
-    }
 
+    if(action.equals("initMerchant")){
+      initMerchant(args, callbackContext);
+      return true;
+    } else if (action.equals("createEMVTransaction")) {
+      createEMVTransaction(args, callbackContext);
+      return true;
+    } else if (action.equals("createNonEMVTransaction")) {
+      createNonEMVTransaction(args, callbackContext);
+      return true;      
+    }
     return true;
   }
 
 
   private Transaction createLoginTransaction(){
-    return this.merchant.createMobileTransaction(TransactionType.MOBILE_DEVICE_LOGIN);
+    return this.merchant.createMobileTransaction(net.authorize.mobile.TransactionType.MOBILE_DEVICE_LOGIN);
   }
 
   private void setEnvironment(String environment, PasswordAuthentication passAuth){
-    switch(environment) {
-      case "sandbox":
+      if(environment.equals("sandbox")) {
         this.merchant = Merchant.createMerchant(Environment.SANDBOX, passAuth);
-        break;
-      case "production":
+      } else if (environment.equals("production")){
         this.merchant = Merchant.createMerchant(Environment.PRODUCTION, passAuth);
-        break;
-    }
+      }
   }
 
  
   public void initMerchant(JSONArray args, CallbackContext callbackContext) {
     net.authorize.mobile.Result result;
-    String deviceID = args.getString("device_id");
-    String deviceDescription = args.getString("device_description");
-    String deviceNumber = args.getString("device_number");
-    String username = args.getString("username");
-    String password = args.getString("password");
-    String environment = args.getString("environment");
+    String deviceID = "636295";
+    String deviceDescription = "Device description";
+    String deviceNumber = "425-555-0000";
+    String username = "miranda4bread";
+    String password = ".Bread@1234";
+    String environment = "sandbox";
     
 
     PasswordAuthentication passAuth = PasswordAuthentication
@@ -120,43 +117,6 @@ public class AuthozizeNetPlugin extends CordovaPlugin {
 
   }
   /* Create Non-EMV transaction Using Encrypted Swiper Data */
-  public void createNonEMVTransaction(JSONArray args, CallbackContext callbackContext){
-    EMVTransactionManager.EMVTransactionListener iemvTransaction = 
-      new EMVTransactionManager.EMVTransactionListener() {
-          @Override
-          public void onEMVTransactionSuccessful(net.authorize.aim.emv.Result result) {
-            callbackContext.success(result.getEmvTlvMap().toString());
-          }
-
-          @Override
-          public void onEMVReadError(EMVErrorCode emvError) {
-             callbackContext.error(emvError.getErrorString());
-          }
-
-          @Override
-          public void onEMVTransactionError(net.authorize.aim.emv.Result result, EMVErrorCode emvError) {
-            callbackContext.error(emvError.getErrorString());
-          }
-      };
-
-    Order order = Order.createOrder();
-    OrderItem oi = OrderItem.createOrderItem();
-    oi.setItemId("1");
-    oi.setItemName("name");
-
-    oi.setItemQuantity("1");
-    oi.setItemTaxable(false);
-    oi.setItemDescription("desc");
-    oi.setItemDescription("Goods");
-
-    order.addOrderItem(oi);
-    BigDecimal transAmount = new BigDecimal("1.20");
-    oi.setItemPrice(transAmount);
-    order.setTotalAmount(transAmount);
-    EMVTransaction emvTransaction = EMVTransactionManager.createEMVTransaction(AppManager.merchant, transAmount);
-    emvTransaction.setEmvTransactionType(EMVTransactionType.GOODS);
-    emvTransaction.setOrder(order);
-    emvTransaction.setSolutionID("SOLUTION ID");
-    EMVTransactionManager.startEMVTransaction(emvTransaction, iemvTransaction, context);
+  public void createNonEMVTransaction(JSONArray args, final CallbackContext callbackContext){
   }
 }

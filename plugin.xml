@@ -16,16 +16,17 @@
         <runs/>
 
         <!-- This is the window variable name you want, like window.MyCordovaPlugin -->
-        <clobbers target="AuthozizeNetPlugin" />
+        <clobbers target="AuthorizeNetPlugin" />
       </js-module>
       <config-file target="res/xml/config.xml" parent="/*">
-        <feature name="AuthozizeNetPlugin">
-          <param name="android-package" value="com.authorizenet.cordova.AuthozizeNetPlugin" />
+        <feature name="AuthorizeNetPlugin">
+          <param name="android-package" value="com.authorizenet.cordova.AuthorizeNetPlugin" />
           <param name="onload" value="true" />
         </feature>
       </config-file>
-
-      <source-file src="src/android/com/authorizenet/cordova/AuthozizeNetPlugin.java" target-dir="src/com/authorizenet/cordova/" />
-      <source-file src="src/android/libs/emv-anet-sdk.aar" target-dir="libs" />
+      <framework src="com.android.support:appcompat-v7:25.3.1" />
+      <framework src="src/android/config.gradle" custom="true" type="gradleReference" />
+      <source-file src="src/android/com/authorizenet/cordova/AuthorizeNetPlugin.java" target-dir="src/com/authorizenet/cordova/" />
+      <resource-file src="src/android/libs/emv-anet-sdk.aar" target="libs/emv-anet-sdk.aar" />
     </platform>
 </plugin>
