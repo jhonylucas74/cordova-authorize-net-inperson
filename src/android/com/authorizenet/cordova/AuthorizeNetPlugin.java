@@ -70,14 +70,15 @@ public class AuthorizeNetPlugin extends CordovaPlugin {
   }
 
  
-  public void initMerchant(JSONArray args, CallbackContext callbackContext) {
+  public void initMerchant(JSONArray args, CallbackContext callbackContext) throws JSONException {
     net.authorize.mobile.Result result;
-    String deviceID = "636295";
-    String deviceDescription = "Device description";
-    String deviceNumber = "425-555-0000";
-    String username = "miranda4bread";
-    String password = ".Bread@1234";
-    String environment = "sandbox";
+
+    String deviceID = args.getString(0);
+    String deviceDescription = args.getString(1);
+    String deviceNumber = args.getString(2);
+    String username = args.getString(3);
+    String password = args.getString(4);
+    String environment = args.getString(5);
     
 
     PasswordAuthentication passAuth = PasswordAuthentication
