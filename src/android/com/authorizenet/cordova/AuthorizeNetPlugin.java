@@ -3,6 +3,7 @@
 package com.authorizenet.cordova;
 
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaActivity;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
@@ -13,14 +14,19 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import android.util.Log;
+import android.content.Context;
+import android.content.Intent;
 
 import net.authorize.Environment;
 import net.authorize.Merchant;
 import net.authorize.TransactionType;
 import net.authorize.aim.cardpresent.DeviceType;
 import net.authorize.aim.cardpresent.MarketType;
+import net.authorize.aim.emv.EMVErrorCode;
 import net.authorize.aim.emv.EMVTransaction;
 import net.authorize.aim.emv.EMVTransactionManager;
+import net.authorize.aim.emv.EMVTransactionManager.EMVTransactionListener;
+import net.authorize.aim.emv.EMVTransactionType;
 import net.authorize.auth.PasswordAuthentication;
 import net.authorize.auth.SessionTokenAuthentication;
 import net.authorize.data.Order;
@@ -53,6 +59,8 @@ public class AuthorizeNetPlugin extends CordovaPlugin {
       createNonEMVTransaction(args, callbackContext);
       return true;      
     }
+
+    callbackContext.error("Not found a method.");
     return true;
   }
 
@@ -103,7 +111,7 @@ public class AuthorizeNetPlugin extends CordovaPlugin {
 
           if ((result.getSessionToken() != null) && (sessionTokenAuthentication != null)) {
               this.merchant.setMerchantAuthentication(sessionTokenAuthentication);
-              callbackContext.success("sucesso");
+              callbackContext.success("Login sucess.");
           }
       } catch (Exception ex) {
          callbackContext.error(ex.toString());
@@ -114,8 +122,64 @@ public class AuthorizeNetPlugin extends CordovaPlugin {
   }
 
   /* Create and Submit an EMV Transaction */
-  public void createEMVTransaction(JSONArray args, CallbackContext callbackContext){
+  public void createEMVTransaction(JSONArray args,final CallbackContext callbackContext){
+    if (this.merchant == null) {
+      callbackContext.error("Not exists Merchant. Please login in.");
+      return;
+    }
 
+    Order order = Order.createOrder();
+    BigDecimal amount;
+    String solutionID;
+    try {
+      JSONObject params = args.getJSONObject(0);
+      JSONArray itens = params.getJSONArray("itens");
+      solutionID = params.getString("solution_id");
+      amount = new BigDecimal(params.getString("amount"));
+      order.setTotalAmount(amount);
+
+      for (int i = 0; i < itens.length(); i++) {
+        JSONObject row = itens.getJSONObject(i);
+
+        OrderItem item = OrderItem.createOrderItem();
+        item.setItemId(row.getString("id"));
+        item.setItemName(row.getString("name"));
+        item.setItemQuantity(row.getString("quantity"));
+        item.setItemTaxable(row.getBoolean("taxable"));
+        item.setItemDescription(row.getString("description"));
+        item.setItemPrice(new BigDecimal(row.getString("price")));
+        order.addOrderItem(item);
+      }
+
+    } catch(JSONException e){
+      callbackContext.error("Problems with JSON args.");
+      return;
+    }
+
+
+    EMVTransactionListener iemvTransaction = new EMVTransactionListener() {
+      @Override
+      public void onEMVTransactionSuccessful(net.authorize.aim.emv.Result result) {
+        callbackContext.success("onEMVTransactionSuccessful: " + result.toString());
+      }
+
+      @Override
+      public void onEMVReadError(EMVErrorCode emvError) {
+        callbackContext.error("onEMVReadError: " + emvError.toString());
+      }
+
+      @Override
+      public void onEMVTransactionError(net.authorize.aim.emv.Result result, EMVErrorCode emvError) {
+        callbackContext.error("onEMVTransactionError: " + emvError.toString());
+      }
+    };
+
+    EMVTransaction emvTransaction = EMVTransactionManager.createEMVTransaction(this.merchant, amount);
+    emvTransaction.setEmvTransactionType(EMVTransactionType.GOODS);
+    emvTransaction.setOrder(order);
+    emvTransaction.setSolutionID(solutionID);
+
+    EMVTransactionManager.startEMVTransaction(emvTransaction, iemvTransaction, cordova.getActivity());
   }
   /* Create Non-EMV transaction Using Encrypted Swiper Data */
   public void createNonEMVTransaction(JSONArray args, final CallbackContext callbackContext){
