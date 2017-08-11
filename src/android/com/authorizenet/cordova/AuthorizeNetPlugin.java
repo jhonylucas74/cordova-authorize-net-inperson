@@ -30,6 +30,7 @@ import net.authorize.aim.emv.EMVTransactionType;
 import net.authorize.auth.PasswordAuthentication;
 import net.authorize.auth.SessionTokenAuthentication;
 import net.authorize.data.Order;
+import net.authorize.data.swiperdata.*;
 import net.authorize.data.OrderItem;
 import net.authorize.data.creditcard.CreditCard;
 import net.authorize.data.creditcard.CreditCardPresenceType;
@@ -181,7 +182,67 @@ public class AuthorizeNetPlugin extends CordovaPlugin {
 
     EMVTransactionManager.startEMVTransaction(emvTransaction, iemvTransaction, cordova.getActivity());
   }
+
   /* Create Non-EMV transaction Using Encrypted Swiper Data */
   public void createNonEMVTransaction(JSONArray args, final CallbackContext callbackContext){
+    if (this.merchant == null) {
+      callbackContext.error("Not exists Merchant. Please login in.");
+      return;
+    }
+
+    String IDtechBlob;
+    Order order = Order.createOrder();
+    BigDecimal amount;
+    String DeviceInfo;
+
+    try {
+      JSONObject params = args.getJSONObject(0);
+      JSONArray itens = params.getJSONArray("itens");
+      IDtechBlob = params.getString("id_tech_blob");
+      DeviceInfo = params.getString("device_info");
+      amount = new BigDecimal(params.getString("amount"));
+      order.setTotalAmount(amount);
+
+      for (int i = 0; i < itens.length(); i++) {
+        JSONObject row = itens.getJSONObject(i);
+
+        OrderItem item = OrderItem.createOrderItem();
+        item.setItemId(row.getString("id"));
+        item.setItemName(row.getString("name"));
+        item.setItemQuantity(row.getString("quantity"));
+        item.setItemTaxable(row.getBoolean("taxable"));
+        item.setItemDescription(row.getString("description"));
+        item.setItemPrice(new BigDecimal(row.getString("price")));
+        order.addOrderItem(item);
+      }
+
+    } catch(JSONException e){
+      callbackContext.error("Problems with JSON args.");
+      return;
+    }
+
+
+    CreditCard creditCard = CreditCard.createCreditCard();
+    creditCard.setCardPresenseType(net.authorize.data.creditcard.CreditCardPresenceType.CARD_PRESENT_ENCRYPTED);
+    creditCard.getSwipperData().setMode(SwiperModeType.DATA);
+
+    creditCard.getSwipperData().setEncryptedData(IDtechBlob);
+    creditCard.getSwipperData().setDeviceInfo(DeviceInfo);
+    creditCard.getSwipperData().setEncryptionAlgorithm(SwiperEncryptionAlgorithmType.TDES);
+
+    net.authorize.aim.Transaction authCaptureTransaction = net.authorize.aim.
+            Transaction.createTransaction(merchant, TransactionType.AUTH_CAPTURE, amount);
+
+    authCaptureTransaction.setCreditCard(creditCard);
+    authCaptureTransaction.setOrder(order);
+
+    net.authorize.aim.Result authCaptureResult = (net.authorize.aim.Result) merchant.postTransaction(authCaptureTransaction);
+
+
+    if(authCaptureResult.isOk()) {
+      callbackContext.success(authCaptureResult.toString());
+    } else {
+      callbackContext.error("Transaction Failed.");
+    }
   }
 }

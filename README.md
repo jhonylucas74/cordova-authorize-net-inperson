@@ -46,3 +46,48 @@ Example of use:
   });
 ```
 Remember, use this only after device is ready.
+
+## Create a Non EMV Transaction
+
+```javascript
+  window.AuthorizeNetPlugin.createNonEMVTransaction({
+    id_tech_blob: 'IDtechBlob',
+    device_info: '4649443d49...',
+    amount: 10.00,
+    itens: [{
+      id: '1',
+      name: 'foo',
+      quantity: 1,
+      taxable: false,
+      description: 'Small and pretty.',
+      price: 10.00
+    }]
+  }, (sucess) => {
+    alert("EMVT sucesso!")
+  }, (err) => {
+    alert(err);
+  })
+
+```
+
+## Create a EMV Transaction
+
+```javascript
+  window.AuthorizeNetPlugin.createEMVTransaction({
+    solution_id: 'solution_id',
+    amount: 10.00,
+    itens: [{
+      id: '1',
+      name: 'foo',
+      quantity: 1,
+      taxable: false,
+      description: 'Small and pretty.',
+      price: 10.00
+    }]
+  }, (sucess) => {
+    alert("EMVT sucesso!")
+  }, (err) => {
+    alert(err);
+  })
+
+```

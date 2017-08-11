@@ -22,10 +22,10 @@ var AuthozizeNetPlugin = {
     exec(done, error, PLUGIN_NAME, 'initMerchant', args);
   },
   createEMVTransaction: function(options, done, error) {
-    exec(done, error, PLUGIN_NAME, 'createEMVTransaction', options);
+    exec(done, error, PLUGIN_NAME, 'createEMVTransaction', [options]);
   },
   createNonEMVTransaction: function(options, done, error) {
-    exec(done, error, PLUGIN_NAME, 'createNonEMVTransaction', options);
+    exec(done, error, PLUGIN_NAME, 'createNonEMVTransaction', [options]);
   },
   Environment: {
     SANDBOX: 'sandbox',
